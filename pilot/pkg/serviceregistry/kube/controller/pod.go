@@ -62,6 +62,14 @@ func newPodCache(c *Controller, informer coreinformers.PodInformer, queueEndpoin
 	return out
 }
 
+func isPodReady(pod *v1.Pod) bool {
+	ready := true
+	for _, cs := range pod.Status.ContainerStatuses {
+		ready = ready && cs.Ready
+	}
+	return ready
+}
+
 // onEvent updates the IP-based index (pc.podsByIP).
 func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 	pc.Lock()
@@ -79,7 +87,7 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 			return fmt.Errorf("tombstone contained object that is not a pod %#v", curr)
 		}
 	}
-
+	isReady := false
 	ip := pod.Status.PodIP
 
 	// PodIP will be empty when pod is just created, but before the IP is assigned
@@ -94,6 +102,7 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 					// add to cache if the pod is running or pending
 					pc.update(ip, key)
 				}
+				isReady = isPodReady(pod)
 			}
 		case model.EventUpdate:
 			if pod.DeletionTimestamp != nil {
@@ -109,7 +118,7 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 						// add to cache if the pod is running or pending
 						pc.update(ip, key)
 					}
-
+					isReady = isPodReady(pod)
 				default:
 					// delete if the pod switched to other states and is in the cache
 					if pc.podsByIP[ip] == key {
@@ -131,6 +140,7 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 				Namespace: pod.Namespace,
 				Endpoint:  ep,
 				PortMap:   getPortMap(pod),
+				Ready:     isReady,
 			}, ev)
 		}
 	}

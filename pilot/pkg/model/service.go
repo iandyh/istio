@@ -248,6 +248,7 @@ type WorkloadInstance struct {
 	Namespace string            `json:"namespace,omitempty"`
 	Endpoint  *IstioEndpoint    `json:"endpoint,omitempty"`
 	PortMap   map[string]uint32 `json:"portMap,omitempty"`
+	Ready     bool
 }
 
 // DeepCopy creates a copy of WorkloadInstance.
@@ -261,6 +262,7 @@ func (instance *WorkloadInstance) DeepCopy() *WorkloadInstance {
 		Namespace: instance.Namespace,
 		PortMap:   pmap,
 		Endpoint:  instance.Endpoint.DeepCopy(),
+		Ready:     instance.Ready,
 	}
 }
 
